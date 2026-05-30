@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { KeyboardSkin, SoundPack, UserStats } from '../types';
 import { playSuccessSound } from '../audio';
-import { ShieldCheck, ShoppingCart, Key, Sparkles, Volume2, Coins, AlertCircle } from 'lucide-react';
+import { ShoppingBag, Lock, Check, Star, Coins } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface ShopTabProps {
   skins: KeyboardSkin[];
@@ -14,255 +15,163 @@ interface ShopTabProps {
 }
 
 export const ShopTab: React.FC<ShopTabProps> = ({
-  skins,
-  setSkins,
-  sounds,
-  setSounds,
-  userStats,
-  setUserStats,
-  triggerToast,
+  skins, setSkins, sounds, setSounds, userStats, setUserStats, triggerToast
 }) => {
-  const [subTab, setSubTab] = useState<'skins' | 'sounds'>('skins');
+  const [tab, setTab] = useState<'themes' | 'sounds' | 'effects' | 'avatars'>('themes');
+
+  const handleBuySkin = (skin: KeyboardSkin) => {
+    if (userStats.coins < skin.cost) {
+      triggerToast(`Need ${skin.cost} Coins — keep typing to earn!`, 'success');
+      return;
+    }
+    playSuccessSound();
+    setUserStats(prev => ({ ...prev, coins: prev.coins - skin.cost }));
+    setSkins(prev => prev.map(s => ({ ...s, unlocked: s.id === skin.id ? true : s.unlocked, equipped: s.id === skin.id })));
+    triggerToast(`${skin.name} equipped! 🎨`, 'reward');
+  };
 
   const handleEquipSkin = (id: string) => {
-    setSkins(prev => prev.map(s => ({
-      ...s,
-      equipped: s.id === id
-    })));
-    triggerToast('Keyboard Theme Equipped!', 'success');
+    setSkins(prev => prev.map(s => ({ ...s, equipped: s.id === id })));
+    triggerToast('Theme equipped!', 'success');
   };
 
-  const handlePurchaseSkin = (skin: KeyboardSkin) => {
-    if (userStats.coins < skin.cost) {
-      triggerToast(`Insufficient funds! Need ${skin.cost} Coins. Type in Sandbox to earn!`, 'success');
-      return;
-    }
-
-    playSuccessSound();
-    
-    // Deduct coins
-    setUserStats(prev => ({
-      ...prev,
-      coins: prev.coins - skin.cost
-    }));
-
-    // Unlock skin
-    setSkins(prev => prev.map(s => {
-      if (s.id === skin.id) {
-        return { ...s, unlocked: true, equipped: true };
-      }
-      return { ...s, equipped: s.id === skin.id ? true : false };
-    }));
-
-    triggerToast(`Skins Grid Unlocked: ${skin.name}! 🎨`, 'reward');
-  };
-
-  const handleEquipSound = (id: string) => {
-    setSounds(prev => prev.map(s => ({
-      ...s,
-      equipped: s.id === id
-    })));
-    triggerToast('Mechanical key click equipped!', 'success');
-  };
-
-  const handlePurchaseSound = (sound: SoundPack) => {
-    if (userStats.coins < sound.cost) {
-      triggerToast(`Insufficient funds! Need ${sound.cost} Coins. Type in Sandbox to earn!`, 'success');
-      return;
-    }
-
-    playSuccessSound();
-
-    // Deduct coins
-    setUserStats(prev => ({
-      ...prev,
-      coins: prev.coins - sound.cost
-    }));
-
-    // Unlock sound pack
-    setSounds(prev => prev.map(s => {
-      if (s.id === sound.id) {
-        return { ...s, unlocked: true, equipped: true };
-      }
-      return { ...s, equipped: s.id === sound.id ? true : false };
-    }));
-
-    triggerToast(`Soundpack Activated: ${sound.name}! 🔊`, 'reward');
-  };
+  const TABS = ['themes', 'sounds', 'effects', 'avatars'] as const;
 
   return (
-    <div className="space-y-6">
-      
-      {/* Balance Indicator & Mini Header */}
-      <div className="bg-[#1A1D22] p-4.5 rounded-2xl border border-neutral-850 flex justify-between items-center">
-        <div>
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider">Typer X Rewards Shop</h3>
-          <p className="text-[10px] text-gray-500 font-mono mt-0.5">Spend earned currency on customizable skins & click packs</p>
+    <div className="space-y-4">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ShoppingBag size={16} className="text-[#FF7A1A]" />
+          <h2 className="text-base font-bold text-white">Shop</h2>
         </div>
-        
-        {/* Shiny Coins Pill */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-xl font-bold text-sm">
-          <Coins className="w-4 h-4" />
-          <span>{userStats.coins.toLocaleString()}</span>
-          <span className="text-[9px] text-gray-400 font-normal">pts</span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1D22] border border-[#2D3037] rounded-xl">
+          <Coins size={13} className="text-[#FF7A1A]" />
+          <span className="text-xs font-black text-[#F5F5F5] font-mono">{userStats.coins.toLocaleString()}</span>
         </div>
       </div>
 
-      {/* Sub tabs switcher */}
-      <div className="flex bg-[#121417] p-1 rounded-xl border border-neutral-850 max-w-xs mx-auto">
-        <button
-          onClick={() => setSubTab('skins')}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            subTab === 'skins'
-              ? 'bg-[#1A1D22] text-orange-500 border border-orange-500/10'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Keyboard Skins
-        </button>
-        <button
-          onClick={() => setSubTab('sounds')}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            subTab === 'sounds'
-              ? 'bg-[#1A1D22] text-orange-500 border border-orange-500/10'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Key Sound Packs
-        </button>
+      {/* Sub tabs */}
+      <div className="flex gap-1 bg-[#0F1116] p-1 rounded-xl border border-[#2D3037] overflow-x-auto">
+        {TABS.map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold capitalize whitespace-nowrap transition-all cursor-pointer min-w-fit ${
+              tab === t ? 'bg-[#1A1D22] text-[#FF7A1A] border border-[#FF7A1A]/15' : 'text-[#6B7280]'
+            }`}
+          >{t}</button>
+        ))}
       </div>
 
-      {subTab === 'skins' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {skins.map((skin) => (
-            <div 
-              key={skin.id} 
-              className={`p-5 rounded-2xl bg-[#1A1D22] border transition-all flex flex-col justify-between ${
-                skin.equipped ? 'border-orange-500 shadow-md shadow-orange-500/5' : 'border-neutral-850 hover:border-neutral-800'
+      {/* Themes grid */}
+      {tab === 'themes' && (
+        <div className="grid grid-cols-2 gap-3">
+          {skins.map((skin, i) => (
+            <motion.div key={skin.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+              className={`relative p-4 rounded-2xl border transition-all ${
+                skin.equipped
+                  ? 'border-[#FF7A1A]/40 bg-[#FF7A1A]/6 shadow-glow'
+                  : 'border-[#2D3037] bg-[#1A1D22]'
               }`}
             >
-              <div>
-                {/* Simulated Skin Preview Card */}
-                <div 
-                  className={`w-full h-24 rounded-xl mb-4 p-3 flex flex-col justify-between relative overflow-hidden bg-gradient-to-tr ${skin.primaryBg}`}
-                >
-                  <div className="flex justify-between items-start z-10">
-                    <span className="text-[10px] font-mono font-black text-white/90 bg-[#121417]/90 px-1.5 py-0.5 rounded uppercase">
-                      Skin Name: {skin.name}
-                    </span>
-                    {skin.equipped && (
-                      <span className="text-[8px] bg-orange-500 text-black px-1.5 py-0.5 rounded font-black font-sans">
-                        EQUIPPED
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Tiny mock virtual layouts in sample card */}
-                  <div className="flex gap-1 z-10">
-                    {['q', 'w', 'e', 'r', 't'].map(k => (
-                      <div key={k} className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-black uppercase text-gray-300 pointer-events-none select-none border-b border-b-[#0D0D11] ${skin.keyBg}`}>
-                        {k}
-                      </div>
-                    ))}
-                    <div className="w-10 h-6 bg-gradient-to-r from-orange-400 to-amber-500 rounded flex items-center justify-center text-[8px] text-white/90 font-bold uppercase overflow-hidden border-b border-b-orange-600">
-                      Space
-                    </div>
-                  </div>
-
-                  {/* Ambient glowing circle element in card */}
-                  <div 
-                    className="absolute inset-0 pointer-events-none opacity-45"
-                    style={{ background: `radial-gradient(circle at 70% 30%, ${skin.radialGradient}, transparent 60%)` }}
-                  />
+              {/* Color preview */}
+              <div className="w-full h-14 rounded-xl mb-3 flex items-center justify-center relative overflow-hidden"
+                style={{ background: skin.radialGradient || '#1A1D22', border: `1.5px solid ${skin.accentBg || '#FF7A1A'}30` }}>
+                <div className="flex gap-1">
+                  {[1,2,3,4].map(k => (
+                    <div key={k} className="w-6 h-5 rounded-md border border-white/10"
+                      style={{ background: skin.keyBg || '#2D3037' }} />
+                  ))}
                 </div>
-
-                <h4 className="text-sm font-bold text-gray-200">{skin.name}</h4>
-                <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{skin.description}</p>
               </div>
 
-              <div className="mt-4 pt-3.5 border-t border-neutral-850/60 flex items-center justify-between gap-2">
-                <span className="text-[9px] text-gray-500 font-bold uppercase font-mono">
-                  {skin.unlocked ? 'Unlocked ✔' : 'Premium lock'}
-                </span>
+              <p className="text-xs font-bold text-[#F5F5F5] leading-none">{skin.name}</p>
+              <p className="text-[10px] text-[#6B7280] mt-0.5">{skin.colorName}</p>
 
-                {skin.equipped ? (
-                  <button disabled className="px-4 py-1.5 bg-orange-600/10 text-orange-400 border border-orange-500/20 rounded-xl text-xs font-bold leading-normal font-sans">
-                    Active theme
-                  </button>
-                ) : skin.unlocked ? (
-                  <button 
+              <div className="mt-3">
+                {skin.unlocked ? (
+                  <button
                     onClick={() => handleEquipSkin(skin.id)}
-                    className="px-4 py-1.5 bg-neutral-[#222] hover:bg-[#20242B] text-gray-200 hover:text-white border border-neutral-800 rounded-xl text-xs font-bold active:scale-95 transition-transform"
+                    disabled={skin.equipped}
+                    className={`w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      skin.equipped
+                        ? 'bg-[#FF7A1A]/10 text-[#FF7A1A] border border-[#FF7A1A]/20 cursor-default'
+                        : 'bg-[#0F1116] text-[#9CA3AF] border border-[#2D3037] hover:border-[#FF7A1A]/30'
+                    }`}
                   >
-                    Equip Theme
+                    {skin.equipped ? <><Check size={10} className="inline mr-1" />Equipped</> : 'Equip'}
                   </button>
                 ) : (
-                  <button 
-                    onClick={() => handlePurchaseSkin(skin)}
-                    className="px-4 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-black rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition-transform"
+                  <button
+                    onClick={() => handleBuySkin(skin)}
+                    className="w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all text-black"
+                    style={{ background: 'linear-gradient(135deg, #FF7A1A, #FF5000)' }}
                   >
-                    <Coins className="w-3.5 h-3.5" /> Buy for {skin.cost}
+                    <Coins size={10} className="inline mr-1" />{skin.cost.toLocaleString()}
                   </button>
                 )}
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {sounds.map((sound) => (
-            <div 
-              key={sound.id} 
-              className={`p-5 rounded-2xl bg-[#1A1D22] border transition-all flex flex-col justify-between ${
-                sound.equipped ? 'border-orange-500 shadow-md shadow-orange-500/5' : 'border-neutral-850 hover:border-neutral-800'
-              }`}
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-[#121417] rounded-xl text-orange-400 border border-neutral-800">
-                    <Volume2 className="w-5 h-5" />
-                  </div>
-                  {sound.equipped && (
-                    <span className="text-[8px] bg-orange-500 text-black px-1.5 py-0.5 rounded font-black font-sans leading-none">
-                      ACTIVE PACK
-                    </span>
-                  )}
+
+              {!skin.unlocked && <Lock size={12} className="absolute top-3 right-3 text-[#6B7280]" />}
+              {skin.equipped && (
+                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#FF7A1A] flex items-center justify-center">
+                  <Check size={10} className="text-black" />
                 </div>
-
-                <h4 className="text-sm font-bold text-gray-200 mt-4">{sound.name}</h4>
-                <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{sound.description}</p>
-              </div>
-
-              <div className="mt-4 pt-3.5 border-t border-neutral-850/60 flex items-center justify-between gap-2">
-                <span className="text-[9px] text-gray-500 font-bold uppercase font-mono">
-                  {sound.unlocked ? 'License active' : 'Locked Pack'}
-                </span>
-
-                {sound.equipped ? (
-                  <button disabled className="px-4 py-1.5 bg-orange-600/10 text-orange-400 border border-orange-500/20 rounded-xl text-xs font-bold font-sans">
-                    Active sound
-                  </button>
-                ) : sound.unlocked ? (
-                  <button 
-                    onClick={() => handleEquipSound(sound.id)}
-                    className="px-4 py-1.5 bg-neutral-[#222] hover:bg-[#20242B] text-gray-200 hover:text-white border border-neutral-800 rounded-xl text-xs font-bold active:scale-95 transition-transform"
-                  >
-                    Equip Pack
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => handlePurchaseSound(sound)}
-                    className="px-4 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-black rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition-transform"
-                  >
-                    <Coins className="w-3.5 h-3.5" /> Buy for {sound.cost}
-                  </button>
-                )}
-              </div>
-            </div>
+              )}
+            </motion.div>
           ))}
         </div>
       )}
 
+      {/* Sounds */}
+      {tab === 'sounds' && (
+        <div className="space-y-3">
+          {sounds.map((s, i) => (
+            <motion.div key={s.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+              className={`p-4 rounded-2xl border flex items-center gap-3 ${
+                s.equipped ? 'border-[#FF7A1A]/30 bg-[#FF7A1A]/5' : 'border-[#2D3037] bg-[#1A1D22]'
+              }`}
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#0F1116] border border-[#2D3037] flex items-center justify-center text-lg flex-shrink-0">
+                {s.soundType === 'mechanical' ? '⌨️' : s.soundType === 'bubble' ? '🫧' : s.soundType === 'synth' ? '🎹' : '⚡'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-[#F5F5F5]">{s.name}</p>
+                <p className="text-[10px] text-[#6B7280]">{s.description}</p>
+              </div>
+              {s.unlocked
+                ? <button onClick={() => { setSounds(p => p.map(x => ({...x, equipped: x.id === s.id}))); triggerToast(`${s.name} equipped!`, 'success'); }}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black cursor-pointer ${s.equipped ? 'bg-[#FF7A1A]/10 text-[#FF7A1A] border border-[#FF7A1A]/20' : 'bg-[#0F1116] text-[#9CA3AF] border border-[#2D3037]'}`}>
+                    {s.equipped ? '✓ On' : 'Use'}
+                  </button>
+                : <span className="text-[10px] text-[#FF7A1A] font-mono font-black flex items-center gap-0.5"><Coins size={10} />{s.cost}</span>
+              }
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Coming soon tabs */}
+      {(tab === 'effects' || tab === 'avatars') && (
+        <div className="tx-card text-center py-12">
+          <ShoppingBag size={32} className="mx-auto text-[#2D3037] mb-3" />
+          <p className="text-sm font-bold text-[#9CA3AF]">{tab.charAt(0).toUpperCase() + tab.slice(1)} coming soon</p>
+          <p className="text-xs text-[#6B7280] mt-1">Unlocks at Level 20</p>
+        </div>
+      )}
+
+      {/* Pro Pass */}
+      <div className="p-4 rounded-2xl border border-[#F59E0B]/20 bg-[#F59E0B]/5">
+        <div className="flex items-center gap-2 mb-2">
+          <Star size={14} className="text-[#F59E0B]" />
+          <p className="text-xs font-black text-[#F59E0B] uppercase tracking-wider">Pro Pass — $2.99/mo</p>
+        </div>
+        <p className="text-[11px] text-[#6B7280]">All themes · 2× XP multiplier · Premium effects · Ad-free</p>
+        <button className="mt-3 w-full py-2.5 rounded-xl text-xs font-black tracking-widest uppercase cursor-pointer active:scale-95 transition-transform"
+          style={{ background: 'linear-gradient(135deg, #F59E0B, #FF7A1A)', color: '#000' }}>
+          Unlock Pro Pass
+        </button>
+      </div>
     </div>
   );
 };

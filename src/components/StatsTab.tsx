@@ -1,243 +1,118 @@
 import React, { useState } from 'react';
 import { UserStats } from '../types';
-import { TrendingUp, BarChart2, Calendar, ShieldAlert, Award, Clock } from 'lucide-react';
+import { TrendingUp, Target, Zap, FileText } from 'lucide-react';
+import { motion } from 'motion/react';
 
-interface StatsTabProps {
-  userStats: UserStats;
-}
+interface StatsTabProps { userStats: UserStats; }
+
+const WPM_DATA: Record<string, { day: string; wpm: number }[]> = {
+  '7':  [{ day:'Mon',wpm:58},{ day:'Tue',wpm:64},{ day:'Wed',wpm:60},{ day:'Thu',wpm:72},{ day:'Fri',wpm:68},{ day:'Sat',wpm:78},{ day:'Sun',wpm:74}],
+  '30': [{ day:'W1',wpm:52},{ day:'W2',wpm:58},{ day:'W3',wpm:64},{ day:'W4',wpm:74}],
+  '90': [{ day:'M1',wpm:48},{ day:'M2',wpm:55},{ day:'M3',wpm:62}],
+};
 
 export const StatsTab: React.FC<StatsTabProps> = ({ userStats }) => {
-  const [activeDateFilter, setActiveDateFilter] = useState<'7' | '30' | '90'>('7');
+  const [range, setRange] = useState<'7'|'30'|'90'>('7');
+  const data = WPM_DATA[range];
 
-  // Hardcoded coordinates for our WPM linechart
-  // We'll draw a beautifully glowing custom SVG area path
-  const wpmDataSeven = [
-    { day: 'Mon', wpm: 58 },
-    { day: 'Tue', wpm: 64 },
-    { day: 'Wed', wpm: 60 },
-    { day: 'Thu', wpm: 72 },
-    { day: 'Fri', wpm: 68 },
-    { day: 'Sat', wpm: 78 },
-    { day: 'Sun', wpm: 74 },
-  ];
-
-  const wpmDataThirty = [
-    { day: 'W1', wpm: 52 },
-    { day: 'W2', wpm: 58 },
-    { day: 'W3', wpm: 64 },
-    { day: 'W4', wpm: 74 },
-  ];
-
-  const chartData = activeDateFilter === '7' ? wpmDataSeven : wpmDataThirty;
-
-  // Let's programmatically calculate custom SVG points
-  const width = 500;
-  const height = 200;
-  const paddingLeft = 40;
-  const paddingRight = 20;
-  const paddingTop = 20;
-  const paddingBottom = 40;
-
-  // Find max WPM to scale graph
-  const maxWpm = Math.max(...chartData.map(d => d.wpm), 90);
-  const minWpm = Math.min(...chartData.map(d => d.wpm), 40);
-
-  const getX = (index: number) => {
-    const step = (width - paddingLeft - paddingRight) / (chartData.length - 1);
-    return paddingLeft + index * step;
-  };
-
-  const getY = (wpm: number) => {
-    const range = maxWpm - 40; // baseline 40
-    const graphHeight = height - paddingTop - paddingBottom;
-    const ratio = (wpm - 40) / range;
-    return height - paddingBottom - ratio * graphHeight;
-  };
-
-  // Build the SVG path
-  let linePath = '';
-  let areaPath = '';
-
-  if (chartData.length > 0) {
-    // Generate line string
-    linePath = chartData.reduce((acc, current, index) => {
-      const x = getX(index);
-      const y = getY(current.wpm);
-      return acc + `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }, '');
-
-    // Generate area string
-    const baselineY = height - paddingBottom;
-    const startX = getX(0);
-    const endX = getX(chartData.length - 1);
-    areaPath = `${linePath} L ${endX} ${baselineY} L ${startX} ${baselineY} Z`;
-  }
-
-  // Key error diagnostics mockups
-  const errorKeys = [
-    { key: 'P', errors: 24, text: 'Often pressed key instead of O' },
-    { key: 'B', errors: 18, text: 'Thumb reach error on lower row space lines' },
-    { key: 'Q', errors: 12, text: 'Pinky offset typing errors' },
-  ];
+  const W = 300; const H = 100;
+  const pad = { l: 24, r: 8, t: 8, b: 24 };
+  const maxW = Math.max(...data.map(d => d.wpm));
+  const minW = Math.min(...data.map(d => d.wpm)) - 5;
+  const gW   = W - pad.l - pad.r;
+  const gH   = H - pad.t - pad.b;
+  const xs   = data.map((_, i) => pad.l + (i / (data.length - 1)) * gW);
+  const ys   = data.map(d => pad.t + gH - ((d.wpm - minW) / (maxW - minW + 1)) * gH);
+  const line = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const area = `${line} L${xs[xs.length-1]},${H - pad.b} L${xs[0]},${H - pad.b} Z`;
 
   return (
-    <div className="space-y-6">
-      
-      {/* Date filters switch header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-[#1A1D22] p-4.5 rounded-2xl border border-neutral-850">
-        <div>
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-            <TrendingUp className="w-4 h-4 text-orange-500" /> Analytical Typing Speed Progress
-          </h3>
-          <p className="text-[10px] text-gray-500 font-mono mt-0.5">Vector logs matching real daily keystroke speed trends</p>
-        </div>
+    <div className="space-y-4">
 
-        {/* Option toggler */}
-        <div className="flex bg-[#121417] p-1 rounded-lg border border-neutral-850 self-end sm:self-auto">
-          {[
-            { id: '7', label: '7 Days' },
-            { id: '30', label: '30 Days' },
-            { id: '90', label: '90 Days' },
-          ].map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => setActiveDateFilter(opt.id as any)}
-              className={`px-3 py-1 rounded text-[10px] font-bold transition-all ${
-                activeDateFilter === opt.id
-                  ? 'bg-[#1A1D22] text-orange-400 border border-orange-500/10'
-                  : 'text-gray-500 hover:text-white'
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-bold text-white">Typing Stats</h2>
+        <div className="flex gap-1 bg-[#0F1116] p-0.5 rounded-lg border border-[#2D3037]">
+          {(['7','30','90'] as const).map(r => (
+            <button key={r} onClick={() => setRange(r)}
+              className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                range === r ? 'bg-[#FF7A1A] text-black' : 'text-[#6B7280]'
               }`}
-            >
-              {opt.label}
-            </button>
+            >{r}d</button>
           ))}
         </div>
       </div>
 
-      {/* Grid containing graph and stats summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Graph box - larger columns span */}
-        <div className="lg:col-span-2 bg-[#1A1D22] p-5 rounded-2xl border border-neutral-850 flex flex-col justify-between">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-[11px] font-mono text-gray-400 uppercase">Words per minute trends (WPM)</span>
-            <span className="text-orange-400 text-xs font-bold font-mono">Avg Peak: 78 WPM</span>
+      {/* Headline metrics */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Avg WPM',   value: userStats.avgWpm,       unit: '',  delta: '+12%', Icon: Zap,      color: '#FF7A1A' },
+          { label: 'Accuracy',  value: userStats.avgAccuracy,  unit: '%', delta: '+5%',  Icon: Target,   color: '#22C55E' },
+          { label: 'Total Words',value: (userStats.totalWords/1000).toFixed(1), unit: 'K', delta: '+18%', Icon: FileText, color: '#FF7A1A' },
+        ].map(({ label, value, unit, delta, Icon, color }) => (
+          <div key={label} className="tx-card !p-4 text-center">
+            <Icon size={16} className="mx-auto mb-1.5" style={{ color }} />
+            <div className="text-xl font-bold text-white">{value}<span className="text-sm text-[#6B7280] ml-0.5">{unit}</span></div>
+            <div className="text-[10px] text-[#6B7280] uppercase tracking-wider font-mono">{label}</div>
+            <div className="text-[10px] text-[#22C55E] font-mono mt-1">{delta}</div>
           </div>
-
-          {/* Handcoded Pure SVG Chart container */}
-          <div className="relative w-full overflow-x-auto overflow-y-hidden">
-            <svg 
-              viewBox={`0 0 ${width} ${height}`} 
-              className="w-full h-auto min-w-[400px] text-gray-600 font-mono text-[9px] select-none"
-            >
-              {/* Gradients definitions */}
-              <defs>
-                <linearGradient id="chart-glowing-area" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f97316" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#f97316" stopOpacity="0.01" />
-                </linearGradient>
-              </defs>
-
-              {/* Gridlines */}
-              {Array.from({ length: 4 }).map((_, i) => {
-                const wpmVal = 40 + i * 15;
-                const y = getY(wpmVal);
-                return (
-                  <g key={i}>
-                    <line 
-                      x1={paddingLeft} 
-                      y1={y} 
-                      x2={width - paddingRight} 
-                      y2={y} 
-                      className="stroke-neutral-800/60" 
-                      strokeWidth="1" 
-                      strokeDasharray="2.5" 
-                    />
-                    <text x={paddingLeft - 8} y={y + 3} className="text-right fill-gray-500 text-[8px]" textAnchor="end">
-                      {wpmVal}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Shaded Area */}
-              <path d={areaPath} fill="url(#chart-glowing-area)" />
-
-              {/* Glowing Line */}
-              <path d={linePath} fill="none" stroke="#f97316" strokeWidth="2.5" className="stroke-orange-500" />
-
-              {/* Interactive Dots & text */}
-              {chartData.map((d, idx) => {
-                const x = getX(idx);
-                const y = getY(d.wpm);
-                return (
-                  <g key={idx}>
-                    <circle 
-                      cx={x} 
-                      cy={y} 
-                      r="4.5" 
-                      className="fill-[#1A1D22] stroke-orange-500" 
-                      strokeWidth="2.5" 
-                    />
-                    {/* Hover floating label */}
-                    <text x={x} y={y - 10} className="fill-orange-400 font-bold" textAnchor="middle">
-                      {d.wpm}
-                    </text>
-                    {/* Bottom Day coordinate */}
-                    <text x={x} y={height - 20} className="fill-gray-500 text-[9px]" textAnchor="middle">
-                      {d.day}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-
-          <div className="flex justify-between items-center text-[10px] text-gray-500 mt-2 font-mono">
-            <span>Chart: Baseline locked 40 WPM</span>
-            <span>Speed trends update on real sandbox typed inputs!</span>
-          </div>
-        </div>
-
-        {/* Error diagnosis summary items */}
-        <div className="space-y-4">
-          <div className="bg-[#1A1D22] p-5 rounded-2xl border border-neutral-850">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3.5 flex items-center gap-1.5">
-              <ShieldAlert className="w-4 h-4 text-red-400" /> Errant Key Mapping List
-            </h4>
-            
-            <div className="space-y-3">
-              {errorKeys.map((err, i) => (
-                <div key={i} className="p-3 bg-[#121417] rounded-xl border border-neutral-850 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-red-950/20 text-red-400 border border-red-500/10 font-mono font-black text-xs flex items-center justify-center">
-                    {err.key}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-gray-400">Error rate index</span>
-                      <span className="text-[10px] font-mono text-red-400 font-bold">{err.errors}%</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 font-sans truncate mt-0.5">{err.text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-[#1A1D22] p-5 rounded-2xl border border-neutral-850 flex justify-between items-center">
-            <div className="flex items-center gap-2.5">
-              <Clock className="w-5 h-5 text-orange-500" />
-              <div>
-                <span className="text-xs font-bold text-gray-200">Active hours pattern</span>
-                <p className="text-[10px] text-gray-500">Most active: 10:00 - 14:00 Hrs</p>
-              </div>
-            </div>
-            <span className="text-xs font-mono text-orange-400">Peak WPM</span>
-          </div>
-        </div>
-
+        ))}
       </div>
 
+      {/* WPM Chart */}
+      <div className="tx-card">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+            <TrendingUp size={14} className="text-[#FF7A1A]" /> WPM Trend
+          </h4>
+          <span className="text-[10px] text-[#FF7A1A] font-mono font-bold">{Math.max(...data.map(d => d.wpm))} peak</span>
+        </div>
+
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 100 }}>
+          <defs>
+            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FF7A1A" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#FF7A1A" stopOpacity="0.01" />
+            </linearGradient>
+          </defs>
+          {/* Grid lines */}
+          {[0.25, 0.5, 0.75].map(r => (
+            <line key={r} x1={pad.l} y1={pad.t + gH * r} x2={W - pad.r} y2={pad.t + gH * r}
+              stroke="#2D3037" strokeWidth="1" strokeDasharray="3,3" />
+          ))}
+          {/* Area */}
+          <path d={area} fill="url(#areaGrad)" />
+          {/* Line */}
+          <path d={line} fill="none" stroke="#FF7A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          {/* Dots */}
+          {xs.map((x, i) => (
+            <circle key={i} cx={x} cy={ys[i]} r="3" fill="#FF7A1A" />
+          ))}
+          {/* X labels */}
+          {data.map((d, i) => (
+            <text key={i} x={xs[i]} y={H - 4} textAnchor="middle" fill="#6B7280" fontSize="9" fontFamily="monospace">
+              {d.day}
+            </text>
+          ))}
+        </svg>
+      </div>
+
+      {/* Lifetime stats */}
+      <div className="tx-card">
+        <h4 className="text-xs font-bold text-[#9CA3AF] uppercase tracking-wider mb-4">Lifetime Stats</h4>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: 'Total XP',       value: (96540 + userStats.xp).toLocaleString() },
+            { label: 'Total Words',    value: userStats.totalWords.toLocaleString() },
+            { label: 'Keys Typed',     value: `${(userStats.totalKeys / 1000).toFixed(1)}K` },
+            { label: 'Best Streak',    value: `${userStats.highestStreak} days` },
+          ].map(({ label, value }) => (
+            <div key={label} className="p-3 bg-[#0F1116] rounded-xl border border-[#2D3037]">
+              <p className="text-[10px] text-[#6B7280] font-mono uppercase tracking-wider">{label}</p>
+              <p className="text-base font-black text-white mt-1">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
