@@ -1,0 +1,6 @@
+{
+  "name": "Typer X",
+  "description": "Gamified mobile keyboard experience and companion dashboard featuring a typing sandbox, customizable virtual keyboards, progress systems, daily missions, custom styleguide token explorers, sound effects, and unlocked achievements.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
