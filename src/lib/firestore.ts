@@ -2,10 +2,10 @@ import {
   doc, getDoc, setDoc, updateDoc,
   serverTimestamp, Timestamp,
   collection, query, orderBy, limit, getDocs,
-  onSnapshot,
+  onSnapshot, writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { UserStats } from '../types';
+import { UserStats, Mission } from '../types';
 
 /* ── Firestore document shape ── */
 export interface UserProfile {
@@ -16,6 +16,14 @@ export interface UserProfile {
   createdAt: Timestamp | null;
   lastActive: Timestamp | null;
   stats: UserStats;
+  missions?: MissionProgress; // persisted mission state
+}
+
+/* Mission progress stored per user */
+export interface MissionProgress {
+  active: Mission[];          // today's active missions
+  lastReset: string;          // ISO date string — when daily missions were last rotated
+  weeklyReset: string;        // ISO date string — when weekly missions were last rotated
 }
 
 /* ── Default stats for brand-new users ── */
@@ -41,49 +49,58 @@ export async function getOrCreateUser(
   displayName: string | null,
   photoURL: string | null,
 ): Promise<UserProfile> {
-  const ref = doc(db, 'users', uid);
+  const ref  = doc(db, 'users', uid);
   const snap = await getDoc(ref);
 
   if (snap.exists()) {
-    // Update lastActive on every login
     await updateDoc(ref, { lastActive: serverTimestamp() });
     return snap.data() as UserProfile;
   }
 
-  // New user — seed document
   const username = displayName?.replace(/\s+/g, '') ?? `Typer${uid.slice(0, 5)}`;
-  const profile: Omit<UserProfile, 'createdAt' | 'lastActive'> & {
-    createdAt: ReturnType<typeof serverTimestamp>;
-    lastActive: ReturnType<typeof serverTimestamp>;
-  } = {
-    uid,
-    username,
-    email,
-    photoURL,
-    createdAt: serverTimestamp(),
+  const profile = {
+    uid, username, email, photoURL,
+    createdAt:  serverTimestamp(),
     lastActive: serverTimestamp(),
     stats: DEFAULT_STATS,
+    missions: null,
   };
 
   await setDoc(ref, profile);
-  return { ...profile, createdAt: null, lastActive: null };
+  return { ...profile, createdAt: null, lastActive: null } as unknown as UserProfile;
 }
 
-/** Save full stats object (call after XP gains, level ups etc.) */
+/** Save full stats object + mirror to leaderboard */
 export async function saveStats(uid: string, stats: UserStats): Promise<void> {
-  const ref = doc(db, 'users', uid);
-  await updateDoc(ref, { stats, lastActive: serverTimestamp() });
+  const batch = writeBatch(db);
 
-  // Mirror to leaderboard collection for global ranking
-  const lbRef = doc(db, 'leaderboard', uid);
-  await setDoc(lbRef, {
+  batch.update(doc(db, 'users', uid), {
+    stats,
+    lastActive: serverTimestamp(),
+  });
+
+  batch.set(doc(db, 'leaderboard', uid), {
     uid,
-    xp: stats.xp,
-    level: stats.level,
-    avgWpm: stats.avgWpm,
+    xp:          stats.xp,
+    level:       stats.level,
+    avgWpm:      stats.avgWpm,
     avgAccuracy: stats.avgAccuracy,
-    updatedAt: serverTimestamp(),
+    updatedAt:   serverTimestamp(),
   }, { merge: true });
+
+  await batch.commit();
+}
+
+/** Save mission progress to Firestore */
+export async function saveMissions(
+  uid: string,
+  missions: Mission[],
+  lastReset: string,
+  weeklyReset: string,
+): Promise<void> {
+  await updateDoc(doc(db, 'users', uid), {
+    missions: { active: missions, lastReset, weeklyReset },
+  });
 }
 
 /** Subscribe to own user doc in real time */
@@ -91,52 +108,23 @@ export function subscribeToUser(
   uid: string,
   cb: (profile: UserProfile) => void,
 ) {
-  const ref = doc(db, 'users', uid);
-  return onSnapshot(ref, snap => {
+  return onSnapshot(doc(db, 'users', uid), snap => {
     if (snap.exists()) cb(snap.data() as UserProfile);
   });
 }
 
 /* ── Leaderboard ── */
 export interface LeaderboardEntry {
-  uid: string;
-  xp: number;
-  level: number;
-  avgWpm: number;
+  uid:         string;
+  xp:          number;
+  level:       number;
+  avgWpm:      number;
   avgAccuracy: number;
-  username?: string;
-  photoURL?: string | null;
+  username?:   string;
+  photoURL?:   string | null;
 }
 
-/** Fetch top-N leaderboard entries (one-shot) */
-export async function fetchLeaderboard(n = 20): Promise<LeaderboardEntry[]> {
-  const q = query(
-    collection(db, 'leaderboard'),
-    orderBy('xp', 'desc'),
-    limit(n),
-  );
-  const snap = await getDocs(q);
-
-  // Enrich with username from user docs
-  const entries = await Promise.all(
-    snap.docs.map(async d => {
-      const entry = d.data() as LeaderboardEntry;
-      try {
-        const userSnap = await getDoc(doc(db, 'users', entry.uid));
-        if (userSnap.exists()) {
-          const u = userSnap.data() as UserProfile;
-          entry.username = u.username;
-          entry.photoURL = u.photoURL;
-        }
-      } catch { /* non-critical */ }
-      return entry;
-    }),
-  );
-
-  return entries;
-}
-
-/** Subscribe to leaderboard in real time */
+/** Optimised leaderboard subscription — batch-fetches usernames once */
 export function subscribeToLeaderboard(
   n: number,
   cb: (entries: LeaderboardEntry[]) => void,
@@ -146,21 +134,32 @@ export function subscribeToLeaderboard(
     orderBy('xp', 'desc'),
     limit(n),
   );
+
   return onSnapshot(q, async snap => {
-    const entries = await Promise.all(
-      snap.docs.map(async d => {
-        const entry = d.data() as LeaderboardEntry;
-        try {
-          const userSnap = await getDoc(doc(db, 'users', entry.uid));
-          if (userSnap.exists()) {
-            const u = userSnap.data() as UserProfile;
-            entry.username = u.username;
-            entry.photoURL = u.photoURL;
-          }
-        } catch { /* non-critical */ }
-        return entry;
-      }),
+    // Batch-fetch user docs for username/avatar enrichment
+    const uids = snap.docs.map(d => d.id);
+    const userSnaps = await Promise.allSettled(
+      uids.map(uid => getDoc(doc(db, 'users', uid)))
     );
+
+    const usernameMap: Record<string, { username: string; photoURL: string | null }> = {};
+    userSnaps.forEach((res, i) => {
+      if (res.status === 'fulfilled' && res.value.exists()) {
+        const u = res.value.data() as UserProfile;
+        usernameMap[uids[i]] = { username: u.username, photoURL: u.photoURL };
+      }
+    });
+
+    const entries: LeaderboardEntry[] = snap.docs.map(d => {
+      const entry = d.data() as LeaderboardEntry;
+      const info  = usernameMap[entry.uid];
+      return {
+        ...entry,
+        username: info?.username ?? `User${entry.uid.slice(0, 4)}`,
+        photoURL: info?.photoURL ?? null,
+      };
+    });
+
     cb(entries);
   });
 }
