@@ -2,7 +2,7 @@ import React, {
   createContext, useContext, useEffect, useState, useCallback,
 } from 'react';
 import { User } from 'firebase/auth';
-import { onAuthChange, handleRedirectResult, signOut } from '../lib/auth';
+import { onAuthChange, signOut } from '../lib/auth';
 import { getOrCreateUser, saveStats, subscribeToUser, UserProfile } from '../lib/firestore';
 import { UserStats } from '../types';
 
@@ -16,12 +16,8 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue>({
-  user:        null,
-  profile:     null,
-  userStats:   null,
-  loading:     true,
-  updateStats: async () => {},
-  logout:      async () => {},
+  user: null, profile: null, userStats: null, loading: true,
+  updateStats: async () => {}, logout: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -31,14 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  /* Handle mobile redirect result on mount */
-  useEffect(() => { handleRedirectResult(); }, []);
-
-  /* Listen to Firebase auth state */
   useEffect(() => {
     const unsub = onAuthChange(async (firebaseUser) => {
       setUser(firebaseUser);
-
       if (firebaseUser) {
         const p = await getOrCreateUser(
           firebaseUser.uid,
@@ -50,13 +41,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setProfile(null);
       }
-
       setLoading(false);
     });
     return unsub;
   }, []);
 
-  /* Subscribe to real-time profile updates once logged in */
   useEffect(() => {
     if (!user) return;
     const unsub = subscribeToUser(user.uid, setProfile);
@@ -65,7 +54,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateStats = useCallback(async (stats: UserStats) => {
     if (!user) return;
-    // Optimistically update local state
     setProfile(prev => prev ? { ...prev, stats } : prev);
     await saveStats(user.uid, stats);
   }, [user]);
@@ -77,16 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        userStats: profile?.stats ?? null,
-        loading,
-        updateStats,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ user, profile, userStats: profile?.stats ?? null, loading, updateStats, logout }}>
       {children}
     </AuthContext.Provider>
   );
