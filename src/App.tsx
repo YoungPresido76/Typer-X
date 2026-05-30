@@ -117,8 +117,8 @@ export default function App() {
           <AnimatePresence mode="wait">
             <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }}>
               {activeTab === 'home' && <DashboardTab userStats={userStats} missions={missions} onNavigate={t => setActiveTab(t as NavTab)} />}
-              {activeTab === 'missions' && <MissionsTab missions={missions} setMissions={setMissions} userStats={userStats} setUserStats={next => updateStats(next)} triggerToast={triggerToast} />}
-              {activeTab === 'shop' && <ShopTab skins={skins} setSkins={setSkins} sounds={sounds} setSounds={setSounds} userStats={userStats} setUserStats={next => updateStats(next)} triggerToast={triggerToast} />}
+              {activeTab === 'missions' && <MissionsTab missions={missions} setMissions={setMissions} userStats={userStats} setUserStats={((next: any) => { if (typeof next === 'function') { updateStats(next(userStats!)); } else { updateStats(next); } }) as any} triggerToast={triggerToast} />}
+              {activeTab === 'shop' && <ShopTab skins={skins} setSkins={setSkins} sounds={sounds} setSounds={setSounds} userStats={userStats} setUserStats={((next: any) => { if (typeof next === 'function') { updateStats(next(userStats!)); } else { updateStats(next); } }) as any} triggerToast={triggerToast} />}
               {activeTab === 'stats' && (
                 <div className="space-y-6">
                   <LeaderboardTab leaderboard={mappedLeaderboard.length ? mappedLeaderboard : INITIAL_LEADERBOARD} userXp={userStats.xp} userWpm={userStats.avgWpm} userAccuracy={userStats.avgAccuracy} onStartDuel={() => triggerToast('Arena Duel coming in Chat 5! 🏎️', 'success')} />
