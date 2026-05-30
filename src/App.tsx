@@ -37,7 +37,7 @@ const LoadingScreen = () => (
 );
 
 export default function App() {
-  const { user, profile, userStats, loading, updateStats, logout } = useAuth();
+  const { user, profile, userStats, loading, firestoreError, updateStats, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [skins, setSkins]         = useState<KeyboardSkin[]>(INITIAL_SKINS);
   const [sounds, setSounds]       = useState<SoundPack[]>(INITIAL_SOUNDPACKS);
