@@ -1,27 +1,29 @@
-export type NavTab = 'home' | 'tree' | 'leaderboard' | 'shop' | 'settings';
+export interface KeyboardSkin {
+  id: string;
+  name: string;
+  colorName: string;
+  primaryBg: string; // Tailwind class
+  surfaceBg: string;
+  keyBg: string;
+  keyTextColor: string;
+  accentBg: string;
+  accentTextColor: string;
+  shadowColor: string;
+  description: string;
+  cost: number;
+  unlocked: boolean;
+  equipped: boolean;
+  radialGradient: string;
+}
 
-export type LevelTitle =
-  | 'Glyph Apprentice'
-  | 'Key Carver'
-  | 'Word Forger'
-  | 'Cipher Knight'
-  | 'Glyph Master'
-  | 'Eternal Scribe';
-
-export interface UserStats {
-  level: number;
-  xp: number;
-  xpNeeded: number;
-  gems: number;          // premium currency
-  streak: number;
-  highestStreak: number;
-  totalWords: number;
-  totalKeys: number;
-  avgWpm: number;
-  avgAccuracy: number;
-  dailyGoalXp: number;     // XP earned today
-  dailyGoalTarget: number; // daily XP target
-  username: string;
+export interface SoundPack {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  unlocked: boolean;
+  equipped: boolean;
+  soundType: 'mechanical' | 'bubble' | 'synth' | 'laser';
 }
 
 export interface Mission {
@@ -30,7 +32,7 @@ export interface Mission {
   title: string;
   description: string;
   xpReward: number;
-  gemReward: number;
+  coinReward: number;
   currentValue: number;
   targetValue: number;
   completed: boolean;
@@ -38,37 +40,38 @@ export interface Mission {
   iconName: string;
 }
 
-export interface LeaderboardUser {
-  rank: number;
-  username: string;
-  level: number;
-  xp: number;
-  wpm: number;
-  avatarBg: string;
-  isCurrentUser?: boolean;
-}
-
-export interface ShopItem {
-  id: string;
-  category: 'themes' | 'keySounds' | 'effects' | 'avatars';
-  name: string;
-  description: string;
-  cost: number;
-  unlocked: boolean;
-  equipped: boolean;
-  previewColor?: string;
-}
-
 export interface Badge {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  category: 'speed' | 'accuracy' | 'streak' | 'volume';
+  tier: number; // 1, 2, 3
   unlocked: boolean;
+  unlockedAt?: string;
 }
 
-export interface Toast {
-  id: number;
-  text: string;
-  type: 'success' | 'achievement' | 'reward' | 'xp';
+export interface LeaderboardUser {
+  rank: number;
+  name: string;
+  avatarUrl?: string;
+  xp: number;
+  wpm: number;
+  accuracy: number;
+  avatarBg: string; // e.g., bg-orange-500
+  isCurrentUser: boolean;
+}
+
+export interface UserStats {
+  level: number;
+  xp: number;
+  xpNeeded: number;
+  coins: number;
+  streak: number;
+  highestStreak: number;
+  totalWords: number;
+  totalKeys: number;
+  avgWpm: number;
+  avgAccuracy: number;
+  dailyGoalProgress: number; // words typed today
+  dailyGoalTarget: number;
 }
