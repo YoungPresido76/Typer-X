@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { KeyboardSkin, SoundPack } from './types';
 import { INITIAL_SKINS, INITIAL_SOUNDPACKS, INITIAL_BADGES } from './data';
-import { useAuth }                     from './contexts/AuthContext';
-import { useMissions }                 from './hooks/useMissions';
+import { useAuth }             from './contexts/AuthContext';
+import { useMissions }         from './hooks/useMissions';
 import { subscribeToLeaderboard, LeaderboardEntry } from './lib/firestore';
-import { OnboardingScreen }            from './screens/OnboardingScreen';
-import { DashboardTab }                from './components/DashboardTab';
-import { MissionsTab }                 from './components/MissionsTab';
-import { ShopTab }                     from './components/ShopTab';
-import { LeaderboardTab }              from './components/LeaderboardTab';
-import { StatsTab }                    from './components/StatsTab';
-import { ProfileTab }                  from './components/ProfileTab';
+import { OnboardingScreen }    from './screens/OnboardingScreen';
+import { DashboardTab }        from './components/DashboardTab';
+import { MissionsTab }         from './components/MissionsTab';
+import { ShopTab }             from './components/ShopTab';
+import { LeaderboardTab }      from './components/LeaderboardTab';
+import { StatsTab }            from './components/StatsTab';
+import { ProfileTab }          from './components/ProfileTab';
 import {
   Home, Flag, ShoppingBag, BarChart2, User,
-  Coins, Bell, X, LogOut, TrendingUp, Gift, Star,
+  Coins, Bell, X, LogOut, Gift, Star, TrendingUp,
 } from 'lucide-react';
-import { motion, AnimatePresence }     from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { playLevelUpSound, playSuccessSound } from './audio';
 
 type NavTab = 'home' | 'missions' | 'shop' | 'stats' | 'profile';
@@ -28,6 +28,7 @@ const NAV_TABS: { id: NavTab; label: string; Icon: React.FC<{ className?: string
   { id: 'profile',  label: 'Profile',  Icon: User        },
 ];
 
+/* Loading spinner — exact chat4 */
 const LoadingScreen = () => (
   <div className="flex flex-col h-dvh w-full bg-[#0D0D0F] items-center justify-center gap-4">
     <div
@@ -111,20 +112,19 @@ export default function App() {
   if (!user || !userStats) return <OnboardingScreen />;
 
   return (
-    <div className="flex flex-col h-dvh w-full bg-[#0D0D0F] text-gray-200 overflow-hidden"
-      style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+    <div className="flex flex-col h-dvh w-full bg-[#0D0D0F] text-gray-200 font-sans overflow-hidden">
 
       {/* Firestore offline banner */}
       {firestoreError && (
         <div className="flex-shrink-0 bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-2">
-          <Bell className="w-3.5 h-3.5 text-amber-400" />
+          <Bell className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
           <p className="text-[10px] text-amber-400 font-mono">
             Offline mode — Enable Firestore in Firebase Console to save progress.
           </p>
         </div>
       )}
 
-      {/* ── Header ── */}
+      {/* Header — exact chat4 */}
       <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-[#0D0D0F]/95 backdrop-blur border-b border-orange-500/10 z-30">
         <div className="flex items-center gap-2.5">
           <div
@@ -140,7 +140,6 @@ export default function App() {
             </p>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-xl">
             <Coins className="w-3.5 h-3.5 text-orange-400" />
@@ -156,7 +155,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Screen ── */}
+      {/* Screen */}
       <main className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
         <div className="p-4 pb-6">
           <AnimatePresence mode="wait">
@@ -214,7 +213,7 @@ export default function App() {
                   <ProfileTab userStats={userStats} badges={INITIAL_BADGES} />
                   <button
                     onClick={() => setActiveModal('confirm-logout')}
-                    className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-neutral-800 text-xs font-bold text-gray-500 cursor-pointer active:bg-white/4 transition-colors"
+                    className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/8 text-xs font-bold text-gray-500 cursor-pointer active:bg-white/4 transition-colors"
                   >
                     <LogOut className="w-3.5 h-3.5" /> Sign Out
                   </button>
@@ -225,7 +224,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* ── Bottom Nav ── */}
+      {/* Bottom Nav — exact chat4 + mission badge */}
       <nav
         className="flex-shrink-0 flex items-center justify-around px-1 pt-2 bg-[#0D0D0F]/95 backdrop-blur border-t border-white/5"
         style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
@@ -266,22 +265,17 @@ export default function App() {
         })}
       </nav>
 
-      {/* ── Toasts ── */}
+      {/* Toasts */}
       <div className="fixed bottom-24 right-4 z-50 flex flex-col gap-2 max-w-[280px] pointer-events-none">
         <AnimatePresence>
           {toasts.map(toast => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
+              initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }}
               className="flex items-center gap-2.5 px-4 py-3 bg-[#121417]/95 border border-neutral-800 border-l-2 border-l-orange-500 rounded-xl shadow-2xl pointer-events-auto backdrop-blur"
             >
               <p className="text-xs font-bold text-gray-200 flex-1">{toast.text}</p>
-              <button
-                onClick={() => setToasts(p => p.filter(t => t.id !== toast.id))}
-                className="text-gray-600 cursor-pointer"
-              >
+              <button onClick={() => setToasts(p => p.filter(t => t.id !== toast.id))} className="text-gray-600 cursor-pointer">
                 <X className="w-3 h-3" />
               </button>
             </motion.div>
@@ -289,7 +283,7 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      {/* ── Modals ── */}
+      {/* Modals — exact chat4 layout, no emojis */}
       <AnimatePresence>
         {activeModal && (
           <motion.div
@@ -300,13 +294,12 @@ export default function App() {
           >
             <motion.div
               initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
-              className="bg-[#121417] border border-neutral-800 w-full max-w-sm rounded-3xl p-6 text-center space-y-4 shadow-2xl relative"
+              className="bg-[#121417] border border-orange-500/20 w-full max-w-sm rounded-3xl p-6 text-center space-y-4 shadow-2xl relative"
             >
               <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 text-gray-500 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Level Up */}
               {activeModal === 'level-up' && (
                 <>
                   <div>
@@ -330,7 +323,7 @@ export default function App() {
                   <p className="text-xs text-gray-400">
                     You reached <b className="text-white">Level {userStats.level}</b>. Keep typing to level up faster.
                   </p>
-                  <div className="bg-neutral-900 p-3 rounded-xl border border-neutral-800 flex justify-around">
+                  <div className="bg-[#1A1D22] p-3 rounded-xl border border-neutral-800 flex justify-around">
                     <div className="text-center">
                       <p className="text-[9px] text-gray-500 font-mono uppercase">XP Bonus</p>
                       <p className="text-sm font-black text-orange-400 flex items-center justify-center gap-1">
@@ -340,7 +333,7 @@ export default function App() {
                     <div className="w-px bg-neutral-800" />
                     <div className="text-center">
                       <p className="text-[9px] text-gray-500 font-mono uppercase">Multiplier</p>
-                      <p className="text-sm font-black text-orange-400">×1.5</p>
+                      <p className="text-sm font-black text-orange-400">x1.5</p>
                     </div>
                   </div>
                   <button
@@ -353,7 +346,6 @@ export default function App() {
                 </>
               )}
 
-              {/* Daily Reward */}
               {activeModal === 'daily-reward' && (
                 <>
                   <div>
@@ -365,7 +357,7 @@ export default function App() {
                       <Gift className="w-8 h-8 text-orange-400" />
                     </div>
                   </div>
-                  <div className="bg-neutral-900 p-3 rounded-xl border border-neutral-800 flex justify-around">
+                  <div className="bg-[#1A1D22] p-3 rounded-xl border border-neutral-800 flex justify-around">
                     <div className="text-center">
                       <p className="text-[9px] text-gray-500 font-mono uppercase">Coins</p>
                       <p className="text-sm font-black text-orange-400">+300</p>
@@ -386,7 +378,6 @@ export default function App() {
                 </>
               )}
 
-              {/* Confirm logout */}
               {activeModal === 'confirm-logout' && (
                 <>
                   <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
@@ -397,14 +388,12 @@ export default function App() {
                     <p className="text-xs text-gray-500 mt-1">Your progress is saved. Sign back in anytime.</p>
                   </div>
                   <div className="flex gap-3">
-                    <button
-                      onClick={() => setActiveModal(null)}
-                      className="flex-1 py-3 rounded-2xl font-bold text-sm text-gray-400 border border-neutral-800 cursor-pointer"
-                    >Cancel</button>
-                    <button
-                      onClick={() => { logout(); setActiveModal(null); }}
-                      className="flex-1 py-3 rounded-2xl font-black text-sm text-white bg-red-500/20 border border-red-500/30 cursor-pointer"
-                    >Sign Out</button>
+                    <button onClick={() => setActiveModal(null)} className="flex-1 py-3 rounded-2xl font-bold text-sm text-gray-400 border border-white/8 cursor-pointer">
+                      Cancel
+                    </button>
+                    <button onClick={() => { logout(); setActiveModal(null); }} className="flex-1 py-3 rounded-2xl font-black text-sm text-white bg-red-500/20 border border-red-500/30 cursor-pointer">
+                      Sign Out
+                    </button>
                   </div>
                 </>
               )}
