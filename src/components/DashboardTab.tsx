@@ -1,8 +1,8 @@
 import React from 'react';
 import { UserStats, Mission } from '../types';
 import {
-  Flame, Zap, Target, Award, ArrowUpRight,
-  Trophy, ChevronRight, Keyboard, Gift, Lock,
+  Flame, ArrowUpRight, Award, Trophy, ChevronRight,
+  Keyboard, Lock, Gift, Target,
 } from 'lucide-react';
 
 interface DashboardTabProps {
@@ -20,10 +20,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ userStats, missions,
   return (
     <div className="space-y-6">
 
-      {/* 1. Level Progress Header */}
+      {/* 1. Level + Streak */}
       <div className="bg-[#1A1D22] p-5 rounded-2xl border border-neutral-800 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-3.5">
-          {/* Circular level indicator */}
           <div className="relative w-16 h-16 rounded-full bg-neutral-900 flex items-center justify-center border-2 border-orange-500/10">
             <svg className="absolute w-full h-full transform -rotate-90">
               <circle cx="32" cy="32" r="28" className="stroke-neutral-800 fill-none" strokeWidth="3.5" />
@@ -36,7 +35,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ userStats, missions,
               <span className="text-lg font-black text-white leading-normal">{userStats.level}</span>
             </div>
           </div>
-
           <div>
             <h3 className="text-[15px] font-bold text-white flex items-center gap-1.5 leading-tight">
               Level {userStats.level} Pilot{' '}
@@ -50,7 +48,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ userStats, missions,
           </div>
         </div>
 
-        {/* Day Streak */}
         <div className="w-full md:w-auto p-3.5 bg-gradient-to-r from-orange-500/15 to-orange-500/5 rounded-xl border border-orange-500/15 flex items-center justify-between md:justify-around gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 bg-[#121417] rounded-xl flex items-center justify-center border border-orange-500/20 text-orange-400">
@@ -75,7 +72,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ userStats, missions,
         </h3>
 
         {!hasData ? (
-          /* Empty shell — no keyboard data yet */
           <div className="bg-[#1A1D22] p-6 rounded-2xl border border-neutral-800 border-dashed text-center">
             <Keyboard className="w-8 h-8 text-orange-500/30 mx-auto mb-3" />
             <p className="text-sm font-bold text-gray-400">No typing data yet</p>
@@ -109,7 +105,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ userStats, missions,
                 <h2 className="text-2xl font-black text-white">
                   {userStats.avgWpm} <span className="text-xs text-neutral-500">WPM</span>
                 </h2>
-                <p className="text-[10px] text-gray-500 font-mono mt-1">Last 100 sessions</p>
+                <p className="text-[10px] text-gray-500 font-mono mt-1">Relative to last 100 sessions</p>
               </div>
             </div>
 
@@ -180,9 +176,11 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ userStats, missions,
           </div>
 
           <div className="space-y-3">
-            {activeMissions.map(m => {
-              const pct     = Math.min(100, Math.round((m.currentValue / m.targetValue) * 100));
-              const noData  = m.currentValue === 0 && !m.completed;
+            {activeMissions.length === 0 ? (
+              <p className="text-xs text-gray-600 font-mono text-center py-4">Loading missions…</p>
+            ) : activeMissions.map(m => {
+              const pct    = Math.min(100, Math.round((m.currentValue / m.targetValue) * 100));
+              const noData = m.currentValue === 0 && !m.completed;
               return (
                 <div key={m.id} className="p-3 bg-[#121417] rounded-xl border border-neutral-800 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
